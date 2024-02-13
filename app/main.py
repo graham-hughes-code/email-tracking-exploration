@@ -28,7 +28,7 @@ class Tracking(Base):
     headers = Column(String)
 
     def as_dict(self):
-        return {"id": self.id, "ts": str(self.ts), "ip": self.user_agent, "headers": self.headers}
+        return {"id": self.id, "ts": str(self.ts), "ip": self.ip, "headers": self.headers}
 
 
 Base.metadata.create_all(bind=engine)
@@ -59,7 +59,7 @@ async def get_image(id: UUID, request: Request, db: Session = Depends(get_db)):
         ts=datetime.now(timezone.utc),
         ip=request.headers.get("x-forwarded-for") or request.client.host,
         user_agent=request.headers.get("user-agent"),
-        headers=str(request.headers),
+        headers=json.dumps(dict(request.headers)),
     )
     db.add(track)
     db.commit()
