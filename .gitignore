@@ -160,4 +160,4 @@ cython_debug/
 #.idea/
 
 # sqlight db
-main.db
+data/

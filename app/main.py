@@ -1,11 +1,14 @@
 from fastapi import FastAPI, Request, Depends
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from contextlib import asynccontextmanager
 
 import logging
 import json
-from datetime import datetime, timezone
+import os
 import uuid
 from uuid import UUID
+from datetime import datetime, timezone
+from pathlib import Path
 
 import sqlalchemy
 from sqlalchemy import create_engine, Column, String
@@ -13,7 +16,7 @@ from sqlalchemy.dialects.sqlite import DATETIME
 from sqlalchemy.orm import sessionmaker, Session
 
 # Database setup
-DATABASE_URL = "sqlite:///./main.db"
+DATABASE_URL = "sqlite:///data/main.db"
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = sqlalchemy.orm.declarative_base()
@@ -31,9 +34,6 @@ class Tracking(Base):
         return {"id": self.id, "ts": str(self.ts), "ip": self.ip, "headers": self.headers}
 
 
-Base.metadata.create_all(bind=engine)
-
-
 # Dependency to get the database session
 def get_db():
     db = SessionLocal()
@@ -43,8 +43,19 @@ def get_db():
         db.close()
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # adding path data if not exists for SQLight
+    if not Path("data").is_dir():
+        os.mkdir("data")
+
+    Base.metadata.create_all(bind=engine)
+
+    yield
+
+
 logger = logging.getLogger(__name__)
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 
 
 @app.get("/")
